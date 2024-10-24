@@ -1,0 +1,147 @@
+import uvicorn
+from fastapi import FastAPI
+from calc import showdata
+from iot_data import query_station,table_tags,fetch_station_data,query_station_by_date
+import json
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI()
+
+origins = [
+    "https://cms.ggas.com","http://localhost:8000","https://cmstest.ggas.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+
+
+
+class Item(BaseModel):
+    station: str | None = None
+    createTime: List[int] | None = None
+    
+   
+
+
+@app.get("/json")
+async def jsonValue():
+    return showdata()
+
+
+def to_json(data):
+  """Converts a list of arrays into a list of JSON objects."""
+
+  objects = []
+  equipment_type=""
+  for array in data:
+    if array[5]==equipment_type:
+        #print("ignore "+array[5])
+        continue
+    
+    objects.append({
+      "id": array[0],
+      "time": array[0],
+      "flow_rate": array[1],
+      "pressure": array[2],
+      "temperature": array[3],
+      "humidity": array[4],
+      "equipment_type": array[5],
+    })
+    equipment_type=array[5]
+  return objects
+def ends_with_g(string):
+  """Returns True if the string ends with 'g', False otherwise."""
+  return string[-1] == 'g'
+
+def to_candidate(data):
+  """Converts a list of arrays into a list of JSON objects."""
+
+  objects = []
+  
+  for array in data:
+    id=array[0][len("pilot_fillstation_"):]
+    if not ends_with_g(id):
+       continue
+    objects.append({
+      "id": id,#array[0],
+      #"displayName": array[2]+":"+array[3],
+      "displayName": array[3],
+    })
+
+  return objects
+
+
+@app.put("/station/fetchData")
+async def fetchData(item: Item):
+
+    if item.station==None:
+        return  {"status":"YES","resultCode":0,"data":[],"recordCount":0,"message":"param not found"}
+
+    print(item)
+
+    station = item.station
+    value =  fetch_station_data(station,item.createTime)
+    jsonValue=json.loads(value) 
+    data=to_json(jsonValue["data"])
+   
+
+    return {"status":"YES","resultCode":0,"data":data,"recordCount":len(data)}
+
+@app.put("/station/candidate")
+async def candidate():
+
+   
+    tags=json.loads(table_tags())
+    data=tags["data"]
+    return {"status":"YES","resultCode":0,"data":to_candidate(data),"recordCount":len(data)}
+
+
+#FS000053G
+@app.get("/station/{station_id}")
+async def station(station_id: str):
+    return json.loads(query_station(station_id))
+
+
+@app.get("/station/dataByDate/{station_id}/{dateStart}/")
+async def dataByDate(station_id: str,dateStart: int):
+    value=query_station_by_date(station_id,dateStart)
+    print(value)
+    return json.loads(query_station_by_date(station_id,dateStart))
+
+
+
+@app.get("/station/echo/{station_id}")
+async def station(station_id: str):
+    return {"temp":30,"pressure":200,"station_id": station_id}
+
+
+
+
+@app.get("/tags")
+async def tags():
+    return json.loads(table_tags())
+
+
+
+if __name__ == "__main2__":
+    print(query_station("fs000160"))
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=19000)
+
+
+
