@@ -5,9 +5,6 @@ import tempfile
 import base64
 
 
-
-    
-
 def printExcelFile(request:ExcelPrintingRequest):
 
     
