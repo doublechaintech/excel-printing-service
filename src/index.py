@@ -24,7 +24,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 
-
 @app.get("/version")
 async def version():
     return {"version":"1.0"}
@@ -40,8 +39,6 @@ async def fileinfo(printRequest:ExcelPrintingRequest):
 @app.post("/echo")
 async def echo(printRequest:ExcelPrintingRequest):
     return echoRequest(printRequest)
-
-
 
 
 

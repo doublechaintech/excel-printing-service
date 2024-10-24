@@ -8,11 +8,7 @@ from excel_print_mac import printExcelFile
 
 
 
-def printExcel(request: ExcelPrintingRequest):
-    resp=ExcelPrintingResonse()
-    resp.resultCode=0
-    resp.message="success"
-    return resp
+
 
 def echoRequest(request: ExcelPrintingRequest):
     return request
@@ -28,6 +24,17 @@ def paramIsMust(paramName):
     resp.resultCode=1
     resp.message=paramName+" must be specified"
     return resp
+
+def printExcel(request: ExcelPrintingRequest):
+    if request.count == None:
+        return paramIsMust("count")
+    if request.title == None:
+        return paramIsMust("title")
+    if request.content == None:
+        return paramIsMust("content")
+    if request.count >= 3:
+        return mustBeLessThan3(request.count)
+    return printExcelFile(request)
 
 
 def fileInfo(request: ExcelPrintingRequest):
